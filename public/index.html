@@ -269,7 +269,7 @@
                         const nextMealTime = new Date(student.lastMeal.getTime() + 8 * 60 * 60 * 1000);
                         const hoursLeft = Math.ceil((nextMealTime - now) / (60 * 60 * 1000));
                         
-                        resultDiv.textContent = `Accès refusé. Prochain repas dans ${hoursLeft} heure(s)`;
+                        resultDiv.textContent = `Accès refusé. Already scanned`;
                         resultDiv.className = 'invalid';
                         
                         // Afficher X rouge
