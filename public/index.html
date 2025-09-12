@@ -1,0 +1,34 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Canteen QR Scanner</title>
+  <script src="https://unpkg.com/html5-qrcode@2.3.8/minified/html5-qrcode.min.js"></script>
+  <style>
+    body { font-family: Arial; text-align:center; background:#222; color:#fff; }
+    #reader { width:300px; margin:auto; margin-top:50px; }
+  </style>
+</head>
+<body>
+  <h1>Scan Student QR</h1>
+  <div id="reader"></div>
+
+  <script>
+    function onScanSuccess(decodedText) {
+      window.location.href = '/check?id=' + encodeURIComponent(decodedText);
+    }
+
+    const html5QrCode = new Html5Qrcode('reader');
+    Html5Qrcode.getCameras().then(cameras => {
+      if(cameras && cameras.length){
+        html5QrCode.start(
+          { facingMode: 'environment' },
+          { fps: 10, qrbox: 250 },
+          onScanSuccess
+        );
+      }
+    }).catch(err => console.error(err));
+  </script>
+</body>
+</html>
