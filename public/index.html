@@ -1,78 +1,382 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Canteen QR Scanner</title>
-<script src="https://unpkg.com/html5-qrcode@2.3.8/minified/html5-qrcode.min.js"></script>
-<style>
-  body { font-family: Arial; text-align: center; margin:0; background:#f0f2f5; }
-  h1 { margin-top: 20px; color: #333; }
-  #scanner-card {
-    background: #fff;
-    width: 90%;
-    max-width: 400px;
-    margin: 30px auto;
-    padding: 20px;
-    border-radius: 15px;
-    box-shadow: 0 5px 20px rgba(0,0,0,0.2);
-  }
-  #reader {
-    width: 100%;
-    height: 300px;
-    background: #000;
-    margin-bottom: 20px;
-  }
-  #result {
-    font-size: 1.2em;
-    font-weight: bold;
-    min-height: 30px;
-  }
-  .valid { color: green; }
-  .invalid { color: red; }
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>School Canteen QR Scanner</title>
+    <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #1a2a6c, #b21f1f, #fdbb2d);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            color: white;
+        }
+        
+        .container {
+            max-width: 900px;
+            width: 100%;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            text-align: center;
+        }
+        
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+        }
+        
+        .subtitle {
+            font-size: 1.2rem;
+            margin-bottom: 30px;
+            opacity: 0.9;
+        }
+        
+        .scanner-container {
+            position: relative;
+            width: 100%;
+            margin: 20px 0;
+        }
+        
+        #video-container {
+            position: relative;
+            width: 100%;
+            max-width: 500px;
+            height: 350px;
+            margin: 0 auto;
+            overflow: hidden;
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
+            background: #000;
+        }
+        
+        #video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        
+        .scan-area {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 200px;
+            height: 200px;
+            border: 2px solid #fff;
+            box-shadow: 0 0 0 100vmax rgba(0, 0, 0, 0.5);
+            z-index: 10;
+        }
+        
+        .scan-area::before, .scan-area::after {
+            content: '';
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            border-color: #00ff00;
+            border-style: solid;
+        }
+        
+        .scan-area::before {
+            top: 0;
+            left: 0;
+            border-width: 3px 0 0 3px;
+        }
+        
+        .scan-area::after {
+            bottom: 0;
+            right: 0;
+            border-width: 0 3px 3px 0;
+        }
+        
+        .controls {
+            margin: 20px 0;
+        }
+        
+        button {
+            background: #4e54c8;
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            font-size: 1rem;
+            border-radius: 50px;
+            cursor: pointer;
+            margin: 0 10px;
+            transition: all 0.3s;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+        }
+        
+        button:hover {
+            background: #3f43a7;
+            transform: translateY(-2px);
+        }
+        
+        #result {
+            margin: 20px auto;
+            padding: 15px;
+            border-radius: 10px;
+            width: 80%;
+            max-width: 400px;
+            font-weight: bold;
+            font-size: 1.2rem;
+            opacity: 0;
+            transition: all 0.5s;
+            text-align: center;
+        }
+        
+        .valid {
+            background: rgba(0, 255, 0, 0.2);
+            color: #00ff00;
+            border: 2px solid #00ff00;
+            opacity: 1 !important;
+        }
+        
+        .invalid {
+            background: rgba(255, 0, 0, 0.2);
+            color: #ff0000;
+            border: 2px solid #ff0000;
+            opacity: 1 !important;
+        }
+        
+        .student-details {
+            background: rgba(255, 255, 255, 0.15);
+            border-radius: 15px;
+            padding: 20px;
+            margin-top: 20px;
+            text-align: left;
+        }
+        
+        .student-details h3 {
+            margin-bottom: 15px;
+            text-align: center;
+        }
+        
+        .student-info {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+        
+        .info-item {
+            padding: 8px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+        }
+        
+        .demo-codes {
+            margin-top: 30px;
+            background: rgba(0, 0, 0, 0.2);
+            padding: 15px;
+            border-radius: 15px;
+        }
+        
+        .demo-codes h3 {
+            margin-bottom: 10px;
+        }
+        
+        .demo-codes p {
+            line-height: 1.6;
+        }
+        
+        @media (max-width: 600px) {
+            .container {
+                padding: 15px;
+            }
+            
+            h1 {
+                font-size: 2rem;
+            }
+            
+            #video-container {
+                height: 250px;
+            }
+            
+            .student-info {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
 </head>
 <body>
+    <div class="container">
+        <h1>School Canteen QR Scanner</h1>
+        <p class="subtitle">Scan student QR codes for meal verification</p>
+        
+        <div class="scanner-container">
+            <div id="video-container">
+                <video id="video" autoplay playsinline></video>
+                <div class="scan-area"></div>
+            </div>
+        </div>
+        
+        <div class="controls">
+            <button id="start-button">Start Camera</button>
+            <button id="stop-button">Stop Camera</button>
+        </div>
+        
+        <div id="result"></div>
+        
+        <div class="student-details">
+            <h3>Student Information</h3>
+            <div class="student-info">
+                <div class="info-item">Name: <span id="student-name">-</span></div>
+                <div class="info-item">ID: <span id="student-id">-</span></div>
+                <div class="info-item">Grade: <span id="student-grade">-</span></div>
+                <div class="info-item">Meal Plan: <span id="meal-plan">-</span></div>
+            </div>
+        </div>
+        
+        <div class="demo-codes">
+            <h3>Demo QR Codes</h3>
+            <p>Valid codes: STUDENT-1234, STUDENT-5678, STUDENT-9012</p>
+            <p>Any other code will show as invalid</p>
+        </div>
+    </div>
 
-<h1>Canteen QR Scanner</h1>
-<div id="scanner-card">
-  <div id="reader">Loading camera...</div>
-  <div id="result"></div>
-</div>
-
-<script>
-async function onScanSuccess(decodedText) {
-    try {
-        const res = await fetch(`/check?id=${encodeURIComponent(decodedText)}`);
-        const result = await res.json();
-        const resultDiv = document.getElementById("result");
-        if(result.valid) {
-            resultDiv.textContent = `✅ ${result.message}`;
-            resultDiv.className = 'valid';
-        } else {
-            resultDiv.textContent = `❌ ${result.message}`;
-            resultDiv.className = 'invalid';
-        }
-    } catch(e) { console.error(e); }
-}
-
-function onScanError(err) { console.warn(err); }
-
-const html5Qrcode = new Html5Qrcode("reader");
-
-// Start scanning with forced back camera
-html5Qrcode.start(
-    { facingMode: "environment" }, // force back camera
-    { fps:10, qrbox:250 },
-    onScanSuccess,
-    onScanError
-).then(() => {
-    document.getElementById("reader").textContent = ""; // clear loading text
-}).catch(err => {
-    document.getElementById("reader").textContent = "Cannot access camera. Check permissions.";
-    console.error(err);
-});
-</script>
-
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const video = document.getElementById('video');
+            const startButton = document.getElementById('start-button');
+            const stopButton = document.getElementById('stop-button');
+            const resultDiv = document.getElementById('result');
+            const studentName = document.getElementById('student-name');
+            const studentId = document.getElementById('student-id');
+            const studentGrade = document.getElementById('student-grade');
+            const mealPlan = document.getElementById('meal-plan');
+            
+            let stream = null;
+            let scanning = false;
+            let animationFrame = null;
+            
+            // Valid student database
+            const studentDatabase = {
+                'STUDENT-1234': {
+                    name: 'Emma Johnson',
+                    id: 'STUDENT-1234',
+                    grade: '10th Grade',
+                    mealPlan: 'Standard (15 meals/week)'
+                },
+                'STUDENT-5678': {
+                    name: 'James Smith',
+                    id: 'STUDENT-5678',
+                    grade: '11th Grade',
+                    mealPlan: 'Premium (21 meals/week)'
+                },
+                'STUDENT-9012': {
+                    name: 'Sophia Williams',
+                    id: 'STUDENT-9012',
+                    grade: '9th Grade',
+                    mealPlan: 'Basic (10 meals/week)'
+                }
+            };
+            
+            // Start camera function
+            startButton.addEventListener('click', async function() {
+                try {
+                    stream = await navigator.mediaDevices.getUserMedia({ 
+                        video: { facingMode: "environment" } 
+                    });
+                    video.srcObject = stream;
+                    scanning = true;
+                    scanQRCode();
+                    resultDiv.className = '';
+                    resultDiv.style.opacity = '0';
+                } catch (err) {
+                    console.error("Error accessing camera:", err);
+                    resultDiv.textContent = "Cannot access camera: " + err.message;
+                    resultDiv.className = 'invalid';
+                }
+            });
+            
+            // Stop camera function
+            stopButton.addEventListener('click', function() {
+                if (stream) {
+                    stream.getTracks().forEach(track => track.stop());
+                    scanning = false;
+                    if (animationFrame) {
+                        cancelAnimationFrame(animationFrame);
+                    }
+                    resultDiv.textContent = "Camera stopped";
+                    resultDiv.className = 'invalid';
+                    
+                    // Clear student details
+                    studentName.textContent = '-';
+                    studentId.textContent = '-';
+                    studentGrade.textContent = '-';
+                    mealPlan.textContent = '-';
+                }
+            });
+            
+            // QR code scanning function
+            function scanQRCode() {
+                if (!scanning) return;
+                
+                const canvas = document.createElement('canvas');
+                const context = canvas.getContext('2d');
+                canvas.width = video.videoWidth;
+                canvas.height = video.videoHeight;
+                
+                context.drawImage(video, 0, 0, canvas.width, canvas.height);
+                
+                const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+                const code = jsQR(imageData.data, imageData.width, imageData.height);
+                
+                if (code) {
+                    const qrData = code.data.trim();
+                    validateQRCode(qrData);
+                } else {
+                    // No QR code found, continue scanning
+                    animationFrame = requestAnimationFrame(scanQRCode);
+                }
+            }
+            
+            // Validate the scanned QR code
+            function validateQRCode(qrData) {
+                if (studentDatabase[qrData]) {
+                    // Valid QR code
+                    resultDiv.textContent = "✓ VALID QR CODE - ACCESS GRANTED";
+                    resultDiv.className = 'valid';
+                    
+                    // Display student information
+                    const student = studentDatabase[qrData];
+                    studentName.textContent = student.name;
+                    studentId.textContent = student.id;
+                    studentGrade.textContent = student.grade;
+                    mealPlan.textContent = student.mealPlan;
+                } else {
+                    // Invalid QR code
+                    resultDiv.textContent = "✗ INVALID QR CODE - ACCESS DENIED";
+                    resultDiv.className = 'invalid';
+                    
+                    // Clear student details
+                    studentName.textContent = '-';
+                    studentId.textContent = '-';
+                    studentGrade.textContent = '-';
+                    mealPlan.textContent = '-';
+                }
+                
+                // Continue scanning after a brief pause
+                setTimeout(() => {
+                    if (scanning) {
+                        animationFrame = requestAnimationFrame(scanQRCode);
+                    }
+                }, 1000);
+            }
+        });
+    </script>
 </body>
 </html>
