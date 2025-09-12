@@ -12,23 +12,25 @@
 </head>
 <body>
   <h1>Scan Student QR</h1>
-  <div id="reader"></div>
+  <div id="reader" style="width:350px"></div>
 
-  <script>
-    function onScanSuccess(decodedText) {
-      window.location.href = '/check?id=' + encodeURIComponent(decodedText);
-    }
+<script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+<script>
+  function onScanSuccess(decodedText, decodedResult) {
+    document.body.innerHTML += `<p style="color:lime">✅ Scanned: ${decodedText}</p>`;
+  }
 
-    const html5QrCode = new Html5Qrcode('reader');
-    Html5Qrcode.getCameras().then(cameras => {
-      if(cameras && cameras.length){
-        html5QrCode.start(
-          { facingMode: 'environment' },
-          { fps: 10, qrbox: 250 },
-          onScanSuccess
-        );
-      }
-    }).catch(err => console.error(err));
-  </script>
+  function onScanError(errorMessage) {
+    console.warn("QR Scan error:", errorMessage);
+  }
+
+  let html5QrcodeScanner = new Html5QrcodeScanner(
+    "reader",
+    { fps: 10, qrbox: 250 }
+  );
+  html5QrcodeScanner.render(onScanSuccess, onScanError);
+</script>
+
+  
 </body>
 </html>
