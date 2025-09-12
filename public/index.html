@@ -7,73 +7,70 @@
   <script src="https://unpkg.com/html5-qrcode@2.3.8/minified/html5-qrcode.min.js"></script>
   <style>
     body {
-      font-family: 'Arial', sans-serif;
-      background: #f0f2f5;
+      font-family: Arial, sans-serif;
       display: flex;
       justify-content: center;
       align-items: center;
+      flex-direction: column;
       height: 100vh;
       margin: 0;
-    }
-    .scanner-card {
-      background: #fff;
-      padding: 30px;
-      border-radius: 15px;
-      box-shadow: 0 10px 25px rgba(0,0,0,0.2);
-      text-align: center;
-      width: 400px;
-    }
-    h1 {
-      margin-bottom: 20px;
-      color: #333;
+      background: #f0f2f5;
     }
     #reader {
-      width: 100%;
+      width: 300px;
+      max-width: 90%;
       margin-bottom: 20px;
     }
     #result {
-      font-size: 1.3em;
+      font-size: 1.2em;
       font-weight: bold;
-      min-height: 40px;
+      min-height: 30px;
     }
     .valid { color: green; }
     .invalid { color: red; }
   </style>
 </head>
 <body>
-  <div class="scanner-card">
-    <h1>Scan Student QR</h1>
-    <div id="reader"></div>
-    <div id="result"></div>
-  </div>
+  <h1>Scan QR Code</h1>
+  <div id="reader"></div>
+  <div id="result"></div>
 
   <script>
-  async function onScanSuccess(decodedText) {
-    try {
-      const response = await fetch(`/check?id=${encodeURIComponent(decodedText)}`);
-      const result = await response.json();
-      const resultDiv = document.getElementById("result");
-      if (result.valid) {
-        resultDiv.innerHTML = `✅ ${result.message}`;
-        resultDiv.className = 'valid';
-      } else {
-        resultDiv.innerHTML = `❌ ${result.message}`;
-        resultDiv.className = 'invalid';
+    async function onScanSuccess(decodedText) {
+      try {
+        const response = await fetch(`/check?id=${encodeURIComponent(decodedText)}`);
+        const result = await response.json();
+        const resultDiv = document.getElementById("result");
+        if (result.valid) {
+          resultDiv.textContent = `✅ ${result.message}`;
+          resultDiv.className = 'valid';
+        } else {
+          resultDiv.textContent = `❌ ${result.message}`;
+          resultDiv.className = 'invalid';
+        }
+      } catch (err) {
+        console.error(err);
       }
-    } catch (err) {
-      console.error("Error checking QR code:", err);
     }
-  }
 
-  function onScanError(errorMessage) {
-    console.warn("QR Scan error:", errorMessage);
-  }
+    function onScanError(errorMessage) {
+      console.warn("QR Scan error:", errorMessage);
+    }
 
-  let html5QrcodeScanner = new Html5QrcodeScanner(
-    "reader",
-    { fps: 10, qrbox: 300 }
-  );
-  html5QrcodeScanner.render(onScanSuccess, onScanError);
+    const html5QrcodeScanner = new Html5Qrcode("reader");
+    // Use back camera if available
+    Html5Qrcode.getCameras().then(cameras => {
+      if (cameras && cameras.length) {
+        html5QrcodeScanner.start(
+          { facingMode: "environment" }, 
+          { fps: 10, qrbox: 250 },
+          onScanSuccess,
+          onScanError
+        );
+      } else {
+        alert("No camera found");
+      }
+    }).catch(err => console.error(err));
   </script>
 </body>
 </html>
