@@ -6,64 +6,85 @@
 <title>Canteen QR Scanner</title>
 <script src="https://unpkg.com/html5-qrcode@2.3.8/minified/html5-qrcode.min.js"></script>
 <style>
-  body { font-family: Arial; text-align: center; margin: 0; background: #f0f2f5; }
-  h1 { margin-top: 20px; }
-  #reader { width: 300px; height: 300px; margin: 20px auto; border: 2px solid #333; }
-  #result { font-size: 1.2em; font-weight: bold; min-height: 30px; }
+  body { font-family: Arial, sans-serif; text-align: center; margin:0; background:#f0f2f5; }
+  h1 { margin-top: 20px; color: #333; }
+  #scanner-card {
+    background: #fff;
+    width: 90%;
+    max-width: 400px;
+    margin: 30px auto;
+    padding: 20px;
+    border-radius: 15px;
+    box-shadow: 0 5px 20px rgba(0,0,0,0.2);
+  }
+  #reader {
+    width: 100%;
+    height: 300px;
+    background: #000;
+    margin-bottom: 20px;
+  }
+  #result {
+    font-size: 1.2em;
+    font-weight: bold;
+    min-height: 30px;
+  }
   .valid { color: green; }
   .invalid { color: red; }
 </style>
 </head>
 <body>
 
-<h1>Scan QR Code</h1>
-<div id="reader"></div>
-<div id="result"></div>
+<h1>Canteen QR Scanner</h1>
+<div id="scanner-card">
+  <div id="reader">Loading camera...</div>
+  <div id="result"></div>
+</div>
 
 <script>
 async function onScanSuccess(decodedText) {
-  try {
-    const res = await fetch(`/check?id=${encodeURIComponent(decodedText)}`);
-    const result = await res.json();
-    const resultDiv = document.getElementById("result");
-
-    if (result.valid) {
-      resultDiv.textContent = `✅ ${result.message}`;
-      resultDiv.className = 'valid';
-    } else {
-      resultDiv.textContent = `❌ ${result.message}`;
-      resultDiv.className = 'invalid';
-    }
-  } catch (err) {
-    console.error(err);
-  }
+    try {
+        const res = await fetch(`/check?id=${encodeURIComponent(decodedText)}`);
+        const result = await res.json();
+        const resultDiv = document.getElementById("result");
+        if(result.valid) {
+            resultDiv.textContent = `✅ ${result.message}`;
+            resultDiv.className = 'valid';
+        } else {
+            resultDiv.textContent = `❌ ${result.message}`;
+            resultDiv.className = 'invalid';
+        }
+    } catch(e) { console.error(e); }
 }
 
 function onScanError(err) {
-  // we can ignore scan errors
+    // silently ignore scan errors
 }
 
 const html5Qrcode = new Html5Qrcode("reader");
 
-// Get cameras and start scanning with back camera if available
 Html5Qrcode.getCameras().then(cameras => {
-  if (cameras && cameras.length) {
-    const cameraId = cameras[0].id; // back camera is usually first
-    html5Qrcode.start(
-      cameraId,
-      { fps: 10, qrbox: 250 },
-      onScanSuccess,
-      onScanError
-    );
-  } else {
-    alert("No camera found on this device.");
-  }
+    if(cameras && cameras.length) {
+        // try to select back camera
+        const backCamera = cameras.find(cam => cam.label.toLowerCase().includes('back')) || cameras[0];
+        html5Qrcode.start(
+            backCamera.id,
+            { fps:10, qrbox:250 },
+            onScanSuccess,
+            onScanError
+        ).then(() => {
+            document.getElementById("reader").textContent = ""; // clear loading text
+        }).catch(err => {
+            document.getElementById("reader").textContent = "Cannot start camera. Check permissions.";
+            console.error(err);
+        });
+    } else {
+        document.getElementById("reader").textContent = "No camera found on this device.";
+    }
 }).catch(err => {
-  console.error("Camera error:", err);
-  alert("Camera access is required for scanning QR codes.");
+    document.getElementById("reader").textContent = "Camera access denied or unsupported device.";
+    console.error(err);
 });
 </script>
 
 </body>
 </html>
-
