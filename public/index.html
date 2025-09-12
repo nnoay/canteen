@@ -196,21 +196,36 @@
             let animationFrame = null;
             let lastScannedCode = null;
             
-            // Base de données des étudiants (Ajoutez vos codes QR valides ici)
-            const studentDatabase = {
-                'ETUDIANT-1234': {
-                    name: 'alaa azouzi',
-                    lastMeal: null
-                },
-                'ETUDIANT-5678': {
-                    name: 'Marie Martin',
-                    lastMeal: null
-                },
-                'ETUDIANT-9012': {
-                    name: 'Pierre Leroy',
-                    lastMeal: null
+            // Charger les données depuis le localStorage ou initialiser
+            function loadStudentData() {
+                const storedData = localStorage.getItem('cantineData');
+                if (storedData) {
+                    return JSON.parse(storedData);
                 }
-            };
+                
+                // Base de données initiale des étudiants (Ajoutez vos codes QR valides ici)
+                return {
+                    'ETUDIANT-1234': {
+                        name: 'Jean Dupont',
+                        lastMeal: null
+                    },
+                    'ETUDIANT-5678': {
+                        name: 'Marie Martin',
+                        lastMeal: null
+                    },
+                    'ETUDIANT-9012': {
+                        name: 'Pierre Leroy',
+                        lastMeal: null
+                    }
+                };
+            }
+            
+            // Sauvegarder les données dans le localStorage
+            function saveStudentData(data) {
+                localStorage.setItem('cantineData', JSON.stringify(data));
+            }
+            
+            let studentDatabase = loadStudentData();
             
             // Démarrer la caméra automatiquement
             async function startCamera() {
@@ -264,31 +279,38 @@
                     const student = studentDatabase[qrData];
                     
                     // Vérifier si l'étudiant a déjà mangé dans les 8 dernières heures
-                    if (student.lastMeal && (now - student.lastMeal) < 8 * 60 * 60 * 1000) {
-                        // Trop tôt depuis le dernier repas
-                        const nextMealTime = new Date(student.lastMeal.getTime() + 8 * 60 * 60 * 1000);
-                        const hoursLeft = Math.ceil((nextMealTime - now) / (60 * 60 * 1000));
-                        
-                        resultDiv.textContent = `Accès refusé. Already scanned`;
-                        resultDiv.className = 'invalid';
-                        
-                        // Afficher X rouge
-                        statusIndicator.innerHTML = "✗";
-                        statusIndicator.style.color = "#ff0000";
-                        statusIndicator.style.border = "4px solid #ff0000";
-                        statusIndicator.classList.add('status-visible');
-                    } else {
-                        // Accès autorisé
-                        student.lastMeal = now;
-                        resultDiv.textContent = `Accès autorisé. `;
-                        resultDiv.className = 'valid';
-                        
-                        // Afficher le checkmark vert
-                        statusIndicator.innerHTML = "✓";
-                        statusIndicator.style.color = "#00c853";
-                        statusIndicator.style.border = "4px solid #00c853";
-                        statusIndicator.classList.add('status-visible');
+                    if (student.lastMeal) {
+                        const lastMealTime = new Date(student.lastMeal);
+                        if ((now - lastMealTime) < 8 * 60 * 60 * 1000) {
+                            // Trop tôt depuis le dernier repas
+                            const nextMealTime = new Date(lastMealTime.getTime() + 8 * 60 * 60 * 1000);
+                            const hoursLeft = Math.ceil((nextMealTime - now) / (60 * 60 * 1000));
+                            
+                            resultDiv.textContent = `Accès refusé. Prochain repas dans ${hoursLeft} heure(s)`;
+                            resultDiv.className = 'invalid';
+                            
+                            // Afficher X rouge
+                            statusIndicator.innerHTML = "✗";
+                            statusIndicator.style.color = "#ff0000";
+                            statusIndicator.style.border = "4px solid #ff0000";
+                            statusIndicator.classList.add('status-visible');
+                            return;
+                        }
                     }
+                    
+                    // Accès autorisé
+                    student.lastMeal = now.toISOString();
+                    studentDatabase[qrData] = student;
+                    saveStudentData(studentDatabase);
+                    
+                    resultDiv.textContent = `Accès autorisé. Bon appétit ${student.name} !`;
+                    resultDiv.className = 'valid';
+                    
+                    // Afficher le checkmark vert
+                    statusIndicator.innerHTML = "✓";
+                    statusIndicator.style.color = "#00c853";
+                    statusIndicator.style.border = "4px solid #00c853";
+                    statusIndicator.classList.add('status-visible');
                 } else {
                     // QR code invalide
                     resultDiv.textContent = "Code QR invalide - Accès refusé";
