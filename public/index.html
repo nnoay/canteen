@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="fr">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>School Canteen QR Scanner</title>
+    <title>Scanner QR - Cantine Scolaire</title>
     <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
     <style>
         * {
@@ -131,53 +131,6 @@
             opacity: 1 !important;
         }
         
-        .student-details {
-            background: rgba(0, 114, 255, 0.1);
-            border-radius: 15px;
-            padding: 20px;
-            margin-top: 20px;
-            text-align: left;
-            color: #0072ff;
-            border: 2px solid #0072ff;
-        }
-        
-        .student-details h3 {
-            margin-bottom: 15px;
-            text-align: center;
-            color: #0072ff;
-        }
-        
-        .student-info {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 10px;
-        }
-        
-        .info-item {
-            padding: 8px;
-            background: rgba(0, 114, 255, 0.1);
-            border-radius: 8px;
-            color: #0059c1;
-        }
-        
-        .demo-codes {
-            margin-top: 30px;
-            background: rgba(0, 114, 255, 0.1);
-            padding: 15px;
-            border-radius: 15px;
-            color: #0059c1;
-            border: 2px solid #0072ff;
-        }
-        
-        .demo-codes h3 {
-            margin-bottom: 10px;
-            color: #0072ff;
-        }
-        
-        .demo-codes p {
-            line-height: 1.6;
-        }
-        
         .status-indicator {
             width: 100px;
             height: 100px;
@@ -197,6 +150,15 @@
             transform: scale(1);
         }
         
+        .last-scan {
+            margin-top: 20px;
+            padding: 15px;
+            background: rgba(0, 114, 255, 0.1);
+            border-radius: 10px;
+            color: #0059c1;
+            border: 2px solid #0072ff;
+        }
+        
         @media (max-width: 600px) {
             .container {
                 padding: 15px;
@@ -209,17 +171,13 @@
             #video-container {
                 height: 250px;
             }
-            
-            .student-info {
-                grid-template-columns: 1fr;
-            }
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>School Canteen QR Scanner</h1>
-        <p class="subtitle">Point the camera at a student's QR code</p>
+        <h1>Scanner QR - Cantine Scolaire</h1>
+        <p class="subtitle">Scannez le code QR d'un étudiant pour vérifier son accès</p>
         
         <div class="scanner-container">
             <div id="video-container">
@@ -232,20 +190,9 @@
         
         <div id="result"></div>
         
-        <div class="student-details">
-            <h3>Student Information</h3>
-            <div class="student-info">
-                <div class="info-item">Name: <span id="student-name">-</span></div>
-                <div class="info-item">ID: <span id="student-id">-</span></div>
-                <div class="info-item">Grade: <span id="student-grade">-</span></div>
-                <div class="info-item">Meal Plan: <span id="meal-plan">-</span></div>
-            </div>
-        </div>
-        
-        <div class="demo-codes">
-            <h3>Demo QR Codes</h3>
-            <p>Valid codes: STUDENT-1234, STUDENT-5678, STUDENT-9012</p>
-            <p>Any other code will show as invalid</p>
+        <div class="last-scan">
+            <h3>Dernier scan réussi:</h3>
+            <p id="last-scan-time">Aucun scan pour le moment</p>
         </div>
     </div>
 
@@ -254,37 +201,28 @@
             const video = document.getElementById('video');
             const resultDiv = document.getElementById('result');
             const statusIndicator = document.getElementById('status-indicator');
-            const studentName = document.getElementById('student-name');
-            const studentId = document.getElementById('student-id');
-            const studentGrade = document.getElementById('student-grade');
-            const mealPlan = document.getElementById('meal-plan');
+            const lastScanTime = document.getElementById('last-scan-time');
             
             let scanning = true;
             let animationFrame = null;
             
-            // Valid student database
+            // Base de données des étudiants (LIGNE 107 - Ajoutez vos codes QR valides ici)
             const studentDatabase = {
-                'STUDENT-1234': {
-                    name: 'Emma Johnson',
-                    id: 'STUDENT-1234',
-                    grade: '10th Grade',
-                    mealPlan: 'Standard (15 meals/week)'
+                'ETUDIANT-1234': {
+                    name: 'Jean Dupont',
+                    lastMeal: null
                 },
-                'STUDENT-5678': {
-                    name: 'James Smith',
-                    id: 'STUDENT-5678',
-                    grade: '11th Grade',
-                    mealPlan: 'Premium (21 meals/week)'
+                'ETUDIANT-5678': {
+                    name: 'Marie Martin',
+                    lastMeal: null
                 },
-                'STUDENT-9012': {
-                    name: 'Sophia Williams',
-                    id: 'STUDENT-9012',
-                    grade: '9th Grade',
-                    mealPlan: 'Basic (10 meals/week)'
+                'ETUDIANT-9012': {
+                    name: 'Pierre Leroy',
+                    lastMeal: null
                 }
             };
             
-            // Start camera automatically
+            // Démarrer la caméra automatiquement
             async function startCamera() {
                 try {
                     const stream = await navigator.mediaDevices.getUserMedia({ 
@@ -294,13 +232,13 @@
                     video.play();
                     requestAnimationFrame(scanQRCode);
                 } catch (err) {
-                    console.error("Error accessing camera:", err);
-                    resultDiv.textContent = "Cannot access camera: " + err.message;
+                    console.error("Erreur d'accès à la caméra:", err);
+                    resultDiv.textContent = "Impossible d'accéder à la caméra: " + err.message;
                     resultDiv.className = 'invalid';
                 }
             }
             
-            // QR code scanning function
+            // Fonction de scan QR code
             function scanQRCode() {
                 if (!scanning) return;
                 
@@ -324,50 +262,63 @@
                 animationFrame = requestAnimationFrame(scanQRCode);
             }
             
-            // Validate the scanned QR code
+            // Valider le QR code scanné
             function validateQRCode(qrData) {
-                // Clear previous status with a delay
+                // Effacer le statut précédent après un délai
                 setTimeout(() => {
                     statusIndicator.classList.remove('status-visible');
-                }, 2000);
+                    resultDiv.style.opacity = '0';
+                }, 3000);
                 
                 if (studentDatabase[qrData]) {
-                    // Valid QR code
-                    resultDiv.textContent = "✓ VALID QR CODE - ACCESS GRANTED";
-                    resultDiv.className = 'valid';
-                    
-                    // Show green checkmark
-                    statusIndicator.innerHTML = "✓";
-                    statusIndicator.style.color = "#00c853";
-                    statusIndicator.style.border = "4px solid #00c853";
-                    statusIndicator.classList.add('status-visible');
-                    
-                    // Display student information
+                    const now = new Date();
                     const student = studentDatabase[qrData];
-                    studentName.textContent = student.name;
-                    studentId.textContent = student.id;
-                    studentGrade.textContent = student.grade;
-                    mealPlan.textContent = student.mealPlan;
+                    
+                    // Vérifier si l'étudiant a déjà mangé dans les 8 dernières heures
+                    if (student.lastMeal && (now - student.lastMeal) < 8 * 60 * 60 * 1000) {
+                        // Trop tôt depuis le dernier repas
+                        const nextMealTime = new Date(student.lastMeal.getTime() + 8 * 60 * 60 * 1000);
+                        const hoursLeft = Math.ceil((nextMealTime - now) / (60 * 60 * 1000));
+                        
+                        resultDiv.textContent = `Accès refusé. Prochain repas dans ${hoursLeft} heure(s)`;
+                        resultDiv.className = 'invalid';
+                        
+                        // Afficher X rouge
+                        statusIndicator.innerHTML = "✗";
+                        statusIndicator.style.color = "#ff0000";
+                        statusIndicator.style.border = "4px solid #ff0000";
+                        statusIndicator.classList.add('status-visible');
+                    } else {
+                        // Accès autorisé
+                        student.lastMeal = now;
+                        resultDiv.textContent = `Accès autorisé. Bon appétit ${student.name} !`;
+                        resultDiv.className = 'valid';
+                        
+                        // Afficher le checkmark vert
+                        statusIndicator.innerHTML = "✓";
+                        statusIndicator.style.color = "#00c853";
+                        statusIndicator.style.border = "4px solid #00c853";
+                        statusIndicator.classList.add('status-visible');
+                        
+                        // Mettre à jour l'heure du dernier scan
+                        lastScanTime.textContent = `${student.name} - ${now.toLocaleTimeString()}`;
+                    }
                 } else {
-                    // Invalid QR code
-                    resultDiv.textContent = "✗ INVALID QR CODE - ACCESS DENIED";
+                    // QR code invalide
+                    resultDiv.textContent = "Code QR invalide - Accès refusé";
                     resultDiv.className = 'invalid';
                     
-                    // Show red X
+                    // Afficher X rouge
                     statusIndicator.innerHTML = "✗";
                     statusIndicator.style.color = "#ff0000";
                     statusIndicator.style.border = "4px solid #ff0000";
                     statusIndicator.classList.add('status-visible');
-                    
-                    // Clear student details
-                    studentName.textContent = '-';
-                    studentId.textContent = '-';
-                    studentGrade.textContent = '-';
-                    mealPlan.textContent = '-';
                 }
+                
+                resultDiv.style.opacity = '1';
             }
             
-            // Initialize the camera when page loads
+            // Initialiser la caméra au chargement de la page
             startCamera();
         });
     </script>
