@@ -115,6 +115,10 @@
             opacity: 0;
             transition: all 0.5s;
             text-align: center;
+            min-height: 80px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
         
         .valid {
@@ -150,15 +154,6 @@
             transform: scale(1);
         }
         
-        .last-scan {
-            margin-top: 20px;
-            padding: 15px;
-            background: rgba(0, 114, 255, 0.1);
-            border-radius: 10px;
-            color: #0059c1;
-            border: 2px solid #0072ff;
-        }
-        
         @media (max-width: 600px) {
             .container {
                 padding: 15px;
@@ -189,11 +184,6 @@
         <div class="status-indicator" id="status-indicator"></div>
         
         <div id="result"></div>
-        
-        <div class="last-scan">
-            <h3>Dernier scan réussi:</h3>
-            <p id="last-scan-time">Aucun scan pour le moment</p>
-        </div>
     </div>
 
     <script>
@@ -201,12 +191,12 @@
             const video = document.getElementById('video');
             const resultDiv = document.getElementById('result');
             const statusIndicator = document.getElementById('status-indicator');
-            const lastScanTime = document.getElementById('last-scan-time');
             
             let scanning = true;
             let animationFrame = null;
+            let lastScannedCode = null;
             
-            // Base de données des étudiants (LIGNE 107 - Ajoutez vos codes QR valides ici)
+            // Base de données des étudiants (Ajoutez vos codes QR valides ici)
             const studentDatabase = {
                 'ETUDIANT-1234': {
                     name: 'Jean Dupont',
@@ -255,7 +245,12 @@
                     
                     if (code) {
                         const qrData = code.data.trim();
-                        validateQRCode(qrData);
+                        
+                        // Ne traiter que si c'est un nouveau code
+                        if (qrData !== lastScannedCode) {
+                            lastScannedCode = qrData;
+                            validateQRCode(qrData);
+                        }
                     }
                 }
                 
@@ -264,12 +259,6 @@
             
             // Valider le QR code scanné
             function validateQRCode(qrData) {
-                // Effacer le statut précédent après un délai
-                setTimeout(() => {
-                    statusIndicator.classList.remove('status-visible');
-                    resultDiv.style.opacity = '0';
-                }, 3000);
-                
                 if (studentDatabase[qrData]) {
                     const now = new Date();
                     const student = studentDatabase[qrData];
@@ -299,9 +288,6 @@
                         statusIndicator.style.color = "#00c853";
                         statusIndicator.style.border = "4px solid #00c853";
                         statusIndicator.classList.add('status-visible');
-                        
-                        // Mettre à jour l'heure du dernier scan
-                        lastScanTime.textContent = `${student.name} - ${now.toLocaleTimeString()}`;
                     }
                 } else {
                     // QR code invalide
