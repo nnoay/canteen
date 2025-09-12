@@ -1,76 +1,69 @@
-<!doctype html>
-<html>
+<!DOCTYPE html>
+<html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Canteen QR Scanner</title>
-  <script src="https://unpkg.com/html5-qrcode@2.3.8/minified/html5-qrcode.min.js"></script>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      flex-direction: column;
-      height: 100vh;
-      margin: 0;
-      background: #f0f2f5;
-    }
-    #reader {
-      width: 300px;
-      max-width: 90%;
-      margin-bottom: 20px;
-    }
-    #result {
-      font-size: 1.2em;
-      font-weight: bold;
-      min-height: 30px;
-    }
-    .valid { color: green; }
-    .invalid { color: red; }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Canteen QR Scanner</title>
+<script src="https://unpkg.com/html5-qrcode@2.3.8/minified/html5-qrcode.min.js"></script>
+<style>
+  body { font-family: Arial; text-align: center; margin: 0; background: #f0f2f5; }
+  h1 { margin-top: 20px; }
+  #reader { width: 300px; height: 300px; margin: 20px auto; border: 2px solid #333; }
+  #result { font-size: 1.2em; font-weight: bold; min-height: 30px; }
+  .valid { color: green; }
+  .invalid { color: red; }
+</style>
 </head>
 <body>
-  <h1>Scan QR Code</h1>
-  <div id="reader"></div>
-  <div id="result"></div>
 
-  <script>
-    async function onScanSuccess(decodedText) {
-      try {
-        const response = await fetch(`/check?id=${encodeURIComponent(decodedText)}`);
-        const result = await response.json();
-        const resultDiv = document.getElementById("result");
-        if (result.valid) {
-          resultDiv.textContent = `✅ ${result.message}`;
-          resultDiv.className = 'valid';
-        } else {
-          resultDiv.textContent = `❌ ${result.message}`;
-          resultDiv.className = 'invalid';
-        }
-      } catch (err) {
-        console.error(err);
-      }
+<h1>Scan QR Code</h1>
+<div id="reader"></div>
+<div id="result"></div>
+
+<script>
+async function onScanSuccess(decodedText) {
+  try {
+    const res = await fetch(`/check?id=${encodeURIComponent(decodedText)}`);
+    const result = await res.json();
+    const resultDiv = document.getElementById("result");
+
+    if (result.valid) {
+      resultDiv.textContent = `✅ ${result.message}`;
+      resultDiv.className = 'valid';
+    } else {
+      resultDiv.textContent = `❌ ${result.message}`;
+      resultDiv.className = 'invalid';
     }
+  } catch (err) {
+    console.error(err);
+  }
+}
 
-    function onScanError(errorMessage) {
-      console.warn("QR Scan error:", errorMessage);
-    }
+function onScanError(err) {
+  // we can ignore scan errors
+}
 
-    const html5QrcodeScanner = new Html5Qrcode("reader");
-    // Use back camera if available
-    Html5Qrcode.getCameras().then(cameras => {
-      if (cameras && cameras.length) {
-        html5QrcodeScanner.start(
-          { facingMode: "environment" }, 
-          { fps: 10, qrbox: 250 },
-          onScanSuccess,
-          onScanError
-        );
-      } else {
-        alert("No camera found");
-      }
-    }).catch(err => console.error(err));
-  </script>
+const html5Qrcode = new Html5Qrcode("reader");
+
+// Get cameras and start scanning with back camera if available
+Html5Qrcode.getCameras().then(cameras => {
+  if (cameras && cameras.length) {
+    const cameraId = cameras[0].id; // back camera is usually first
+    html5Qrcode.start(
+      cameraId,
+      { fps: 10, qrbox: 250 },
+      onScanSuccess,
+      onScanError
+    );
+  } else {
+    alert("No camera found on this device.");
+  }
+}).catch(err => {
+  console.error("Camera error:", err);
+  alert("Camera access is required for scanning QR codes.");
+});
+</script>
+
 </body>
 </html>
+
