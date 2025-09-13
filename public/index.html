@@ -14,7 +14,7 @@
         }
         
         body {
-            background: linear-gradient(135deg, #0072ff, #00c6ff);
+            background: linear-gradient(135deg, #0d2b4b, #1a3c63);
             min-height: 100vh;
             display: flex;
             flex-direction: column;
@@ -23,27 +23,58 @@
             color: #fff;
         }
         
+        .header {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 20px;
+            width: 100%;
+            max-width: 900px;
+        }
+        
+        .logo-container {
+            display: flex;
+            align-items: center;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 10px 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        
+        .school-logo {
+            height: 60px;
+            width: auto;
+            margin-right: 15px;
+            border-radius: 6px;
+        }
+        
+        .school-name {
+            color: white;
+            font-size: 1.5rem;
+            font-weight: bold;
+        }
+        
         .container {
             max-width: 900px;
             width: 100%;
-            background: rgba(255, 255, 255, 0.9);
+            background: rgba(255, 255, 255, 0.95);
             border-radius: 20px;
             padding: 30px;
             box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
             text-align: center;
-            color: #0072ff;
+            color: #0d2b4b;
         }
         
         h1 {
             font-size: 2.5rem;
             margin-bottom: 10px;
-            color: #0072ff;
+            color: #0d2b4b;
         }
         
         .subtitle {
             font-size: 1.2rem;
             margin-bottom: 30px;
-            color: #0059c1;
+            color: #1a3c63;
         }
         
         .scanner-container {
@@ -62,7 +93,7 @@
             border-radius: 15px;
             box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
             background: #000;
-            border: 5px solid #0072ff;
+            border: 5px solid #0d2b4b;
         }
         
         #video {
@@ -79,7 +110,7 @@
             width: 200px;
             height: 200px;
             border: 2px solid #fff;
-            box-shadow: 0 0 0 100vmax rgba(0, 114, 255, 0.3);
+            box-shadow: 0 0 0 100vmax rgba(13, 43, 75, 0.3);
             z-index: 10;
         }
         
@@ -88,7 +119,7 @@
             position: absolute;
             width: 20px;
             height: 20px;
-            border-color: #0072ff;
+            border-color: #0d2b4b;
             border-style: solid;
         }
         
@@ -154,6 +185,34 @@
             transform: scale(1);
         }
         
+        .qr-counter {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: rgba(13, 43, 75, 0.9);
+            color: white;
+            padding: 15px;
+            border-radius: 10px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+            font-size: 1.1rem;
+            text-align: center;
+            z-index: 1000;
+            min-width: 180px;
+            border: 2px solid white;
+        }
+        
+        .qr-counter h3 {
+            margin-bottom: 8px;
+            font-size: 1rem;
+            color: #a0c5ff;
+        }
+        
+        .counter-value {
+            font-size: 2rem;
+            font-weight: bold;
+            color: white;
+        }
+        
         @media (max-width: 600px) {
             .container {
                 padding: 15px;
@@ -166,10 +225,36 @@
             #video-container {
                 height: 250px;
             }
+            
+            .school-name {
+                font-size: 1.2rem;
+            }
+            
+            .school-logo {
+                height: 50px;
+            }
+            
+            .qr-counter {
+                bottom: 10px;
+                right: 10px;
+                left: 10px;
+                font-size: 1rem;
+            }
+            
+            .counter-value {
+                font-size: 1.5rem;
+            }
         }
     </style>
 </head>
 <body>
+    <div class="header">
+        <div class="logo-container">
+            <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRFjcXGw-eclYBXW-mMmeO8H7P5OOBOgUJWvQ&s" alt="School Logo" class="school-logo">
+            <div class="school-name">Lycée Pilote Bourguiba Tunis</div>
+        </div>
+    </div>
+    
     <div class="container">
         <h1>Scanner QR - Cantine Scolaire</h1>
         <p class="subtitle">Scannez le code QR d'un étudiant pour vérifier son accès</p>
@@ -186,15 +271,47 @@
         <div id="result"></div>
     </div>
 
+    <div class="qr-counter">
+        <h3>Codes QR scannés aujourd'hui</h3>
+        <div class="counter-value" id="daily-counter">0</div>
+    </div>
+
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             const video = document.getElementById('video');
             const resultDiv = document.getElementById('result');
             const statusIndicator = document.getElementById('status-indicator');
+            const dailyCounter = document.getElementById('daily-counter');
             
             let scanning = true;
             let animationFrame = null;
             let lastScannedCode = null;
+            
+            // Initialize daily counter
+            function initializeDailyCounter() {
+                const today = new Date().toDateString();
+                const counterData = JSON.parse(localStorage.getItem('qrCounterData') || '{}');
+                
+                if (counterData.date !== today) {
+                    // Reset counter for new day
+                    counterData.date = today;
+                    counterData.count = 0;
+                    localStorage.setItem('qrCounterData', JSON.stringify(counterData));
+                }
+                
+                dailyCounter.textContent = counterData.count;
+                return counterData;
+            }
+            
+            // Update daily counter
+            function updateDailyCounter() {
+                const counterData = JSON.parse(localStorage.getItem('qrCounterData') || '{}');
+                counterData.count = (counterData.count || 0) + 1;
+                localStorage.setItem('qrCounterData', JSON.stringify(counterData));
+                dailyCounter.textContent = counterData.count;
+            }
+            
+            let counterData = initializeDailyCounter();
             
             // Charger les données depuis le localStorage ou initialiser
             function loadStudentData() {
@@ -274,6 +391,9 @@
             
             // Valider le QR code scanné
             function validateQRCode(qrData) {
+                // Update the daily counter for any scan (valid or invalid)
+                updateDailyCounter();
+                
                 if (studentDatabase[qrData]) {
                     const now = new Date();
                     const student = studentDatabase[qrData];
