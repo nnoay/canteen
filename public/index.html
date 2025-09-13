@@ -111,6 +111,7 @@
             width: 100%;
             height: 100%;
             object-fit: cover;
+            transform: scaleX(-1); /* Mirror the video for easier scanning */
         }
         
         .scan-area {
@@ -196,6 +197,56 @@
             transform: scale(1);
         }
         
+        .camera-permission {
+            background: #fff8e1;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+            text-align: left;
+            color: #1a3c63;
+            border-left: 5px solid #ffc107;
+        }
+        
+        .camera-permission h3 {
+            color: #d32f2f;
+            margin-bottom: 10px;
+        }
+        
+        .permission-steps {
+            margin-left: 20px;
+        }
+        
+        .permission-steps li {
+            margin-bottom: 8px;
+        }
+        
+        #camera-error {
+            display: none;
+            background: #ffebee;
+            color: #d32f2f;
+            padding: 15px;
+            border-radius: 10px;
+            margin: 20px 0;
+            text-align: center;
+            border: 1px solid #d32f2f;
+        }
+        
+        #start-camera {
+            background: #0d2b4b;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 1.1rem;
+            cursor: pointer;
+            margin: 15px 0;
+            transition: background 0.3s;
+        }
+        
+        #start-camera:hover {
+            background: #1a3c63;
+        }
+        
         .qr-counter {
             position: fixed;
             bottom: 20px;
@@ -272,14 +323,25 @@
     <div class="header">
         <div class="logo-container">
             <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRFjcXGw-eclYBXW-mMmeO8H7P5OOBOgUJWvQ&s" alt="School Logo" class="school-logo">
-            <div class="school-name">Lycée Pilote Bourguiba Tunis</div>
+            <div class="school-name">Lycée Pilote Bourguiba</div>
         </div>
     </div>
     
     <div class="container">
         <h1>Scanner QR - Cantine Scolaire</h1>
-        <p class="subtitle">Scannez le code QR d'un étudiant pour vérifier son accès</p>
         
+        
+
+        
+        <div id="camera-error">
+            <h3>Erreur d'accès à la caméra</h3>
+            <p>La caméra n'a pas pu être démarrée. Veuillez vérifier les permissions et réessayer.</p>
+            <button id="retry-camera">Réessayer</button>
+        </div>
+        
+ 
+  
+            <button id="start-camera">Démarrer la caméra</button>
 
         
         <div class="scanner-container">
@@ -297,7 +359,7 @@
     <div class="qr-counter">
         <h3>Codes QR valides aujourd'hui</h3>
         <div class="counter-value" id="daily-counter">0</div>
-        
+        <div class="counter-reset" id="reset-time">Prochain reset: minuit</div>
     </div>
 
     <script>
@@ -307,10 +369,15 @@
             const statusIndicator = document.getElementById('status-indicator');
             const dailyCounter = document.getElementById('daily-counter');
             const resetTimeElement = document.getElementById('reset-time');
+            const cameraError = document.getElementById('camera-error');
+            const startCameraBtn = document.getElementById('start-camera');
+            const retryCameraBtn = document.getElementById('retry-camera');
+            const cameraPermission = document.querySelector('.camera-permission');
             
-            let scanning = true;
+            let scanning = false;
             let animationFrame = null;
             let lastScannedCode = null;
+            let stream = null;
             
             // Generate student database from etudiant-1000 to etudiant-2000
             function generateStudentDatabase() {
@@ -409,19 +476,60 @@
             
             let studentDatabase = loadStudentData();
             
-            // Démarrer la caméra automatiquement
+            // Démarrer la caméra
             async function startCamera() {
                 try {
-                    const stream = await navigator.mediaDevices.getUserMedia({ 
-                        video: { facingMode: "environment" } 
+                    // Stop any existing stream
+                    if (stream) {
+                        stream.getTracks().forEach(track => track.stop());
+                    }
+                    
+                    stream = await navigator.mediaDevices.getUserMedia({ 
+                        video: { 
+                            facingMode: "environment",
+                            width: { ideal: 1280 },
+                            height: { ideal: 720 }
+                        } 
                     });
+                    
                     video.srcObject = stream;
                     video.play();
+                    
+                    // Hide error and permission UI
+                    cameraError.style.display = 'none';
+                    cameraPermission.style.display = 'none';
+                    
+                    // Start scanning
+                    scanning = true;
                     requestAnimationFrame(scanQRCode);
+                    
                 } catch (err) {
                     console.error("Erreur d'accès à la caméra:", err);
-                    resultDiv.textContent = "Impossible d'accéder à la caméra: " + err.message;
-                    resultDiv.className = 'invalid';
+                    cameraError.style.display = 'block';
+                    cameraPermission.style.display = 'block';
+                    
+                    if (err.name === 'NotAllowedError') {
+                        cameraError.querySelector('p').textContent = 
+                            "Permission refusée. Veuillez autoriser l'accès à la caméra.";
+                    } else if (err.name === 'NotFoundError' || err.name === 'OverconstrainedError') {
+                        cameraError.querySelector('p').textContent = 
+                            "Caméra non disponible. Vérifiez que votre appareil possède une caméra et qu'elle n'est pas utilisée par une autre application.";
+                    } else {
+                        cameraError.querySelector('p').textContent = 
+                            "Impossible d'accéder à la caméra: " + err.message;
+                    }
+                }
+            }
+            
+            // Arrêter la caméra
+            function stopCamera() {
+                scanning = false;
+                if (animationFrame) {
+                    cancelAnimationFrame(animationFrame);
+                }
+                if (stream) {
+                    stream.getTracks().forEach(track => track.stop());
+                    stream = null;
                 }
             }
             
@@ -513,8 +621,15 @@
                 resultDiv.style.opacity = '1';
             }
             
-            // Initialiser la caméra au chargement de la page
+            // Event listeners for camera buttons
+            startCameraBtn.addEventListener('click', startCamera);
+            retryCameraBtn.addEventListener('click', startCamera);
+            
+            // Try to automatically start camera (will fail if no permission yet)
             startCamera();
+            
+            // Clean up when page is closed
+            window.addEventListener('beforeunload', stopCamera);
         });
     </script>
 </body>
