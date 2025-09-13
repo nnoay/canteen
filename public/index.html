@@ -63,6 +63,7 @@
             box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
             text-align: center;
             color: #0d2b4b;
+            margin-bottom: 100px;
         }
         
         h1 {
@@ -75,6 +76,16 @@
             font-size: 1.2rem;
             margin-bottom: 30px;
             color: #1a3c63;
+        }
+        
+        .student-range {
+            background: #e8f4ff;
+            padding: 10px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-weight: bold;
+            color: #1a3c63;
+            border: 1px solid #b8d4f0;
         }
         
         .scanner-container {
@@ -188,16 +199,17 @@
         .qr-counter {
             position: fixed;
             bottom: 20px;
-            right: 20px;
+            left: 50%;
+            transform: translateX(-50%);
             background: rgba(13, 43, 75, 0.9);
             color: white;
-            padding: 15px;
+            padding: 15px 25px;
             border-radius: 10px;
-            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
             font-size: 1.1rem;
             text-align: center;
             z-index: 1000;
-            min-width: 180px;
+            min-width: 200px;
             border: 2px solid white;
         }
         
@@ -208,14 +220,22 @@
         }
         
         .counter-value {
-            font-size: 2rem;
+            font-size: 2.2rem;
             font-weight: bold;
             color: white;
+        }
+        
+        .counter-reset {
+            font-size: 0.8rem;
+            margin-top: 5px;
+            color: #a0c5ff;
+            opacity: 0.8;
         }
         
         @media (max-width: 600px) {
             .container {
                 padding: 15px;
+                margin-bottom: 120px;
             }
             
             h1 {
@@ -236,13 +256,14 @@
             
             .qr-counter {
                 bottom: 10px;
-                right: 10px;
-                left: 10px;
+                width: 90%;
+                max-width: 300px;
                 font-size: 1rem;
+                padding: 12px 20px;
             }
             
             .counter-value {
-                font-size: 1.5rem;
+                font-size: 1.8rem;
             }
         }
     </style>
@@ -259,6 +280,8 @@
         <h1>Scanner QR - Cantine Scolaire</h1>
         <p class="subtitle">Scannez le code QR d'un étudiant pour vérifier son accès</p>
         
+
+        
         <div class="scanner-container">
             <div id="video-container">
                 <video id="video" autoplay playsinline></video>
@@ -272,8 +295,9 @@
     </div>
 
     <div class="qr-counter">
-        <h3>Codes QR scannés aujourd'hui</h3>
+        <h3>Codes QR valides aujourd'hui</h3>
         <div class="counter-value" id="daily-counter">0</div>
+        
     </div>
 
     <script>
@@ -282,10 +306,51 @@
             const resultDiv = document.getElementById('result');
             const statusIndicator = document.getElementById('status-indicator');
             const dailyCounter = document.getElementById('daily-counter');
+            const resetTimeElement = document.getElementById('reset-time');
             
             let scanning = true;
             let animationFrame = null;
             let lastScannedCode = null;
+            
+            // Generate student database from etudiant-1000 to etudiant-2000
+            function generateStudentDatabase() {
+                const database = {};
+                
+                for (let i = 1000; i <= 2000; i++) {
+                    const studentId = `etudiant-${i}`;
+                    database[studentId] = {
+                        name: `Étudiant ${i}`,
+                        lastMeal: null
+                    };
+                }
+                
+                return database;
+            }
+            
+            // Get next reset time (midnight)
+            function getNextResetTime() {
+                const now = new Date();
+                const tomorrow = new Date(now);
+                tomorrow.setDate(tomorrow.getDate() + 1);
+                tomorrow.setHours(0, 0, 0, 0);
+                return tomorrow;
+            }
+            
+            // Format time for display
+            function formatTimeUntilReset(resetTime) {
+                const now = new Date();
+                const diff = resetTime - now;
+                const hours = Math.floor(diff / (1000 * 60 * 60));
+                const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+                
+                return `Prochain reset: ${hours}h ${minutes}m`;
+            }
+            
+            // Update reset time display
+            function updateResetTimeDisplay() {
+                const resetTime = getNextResetTime();
+                resetTimeElement.textContent = formatTimeUntilReset(resetTime);
+            }
             
             // Initialize daily counter
             function initializeDailyCounter() {
@@ -300,12 +365,25 @@
                 }
                 
                 dailyCounter.textContent = counterData.count;
+                updateResetTimeDisplay();
+                
+                // Update reset time every minute
+                setInterval(updateResetTimeDisplay, 60000);
+                
                 return counterData;
             }
             
-            // Update daily counter
+            // Update daily counter (only for valid scans)
             function updateDailyCounter() {
                 const counterData = JSON.parse(localStorage.getItem('qrCounterData') || '{}');
+                const today = new Date().toDateString();
+                
+                // Check if it's a new day
+                if (counterData.date !== today) {
+                    counterData.date = today;
+                    counterData.count = 0;
+                }
+                
                 counterData.count = (counterData.count || 0) + 1;
                 localStorage.setItem('qrCounterData', JSON.stringify(counterData));
                 dailyCounter.textContent = counterData.count;
@@ -320,21 +398,8 @@
                     return JSON.parse(storedData);
                 }
                 
-                // Base de données initiale des étudiants (Ajoutez vos codes QR valides ici)
-                return {
-                    'ETUDIANT-1234': {
-                        name: 'Jean Dupont',
-                        lastMeal: null
-                    },
-                    'ETUDIANT-5678': {
-                        name: 'Marie Martin',
-                        lastMeal: null
-                    },
-                    'ETUDIANT-9012': {
-                        name: 'Pierre Leroy',
-                        lastMeal: null
-                    }
-                };
+                // Generate student database with range etudiant-1000 to etudiant-2000
+                return generateStudentDatabase();
             }
             
             // Sauvegarder les données dans le localStorage
@@ -391,12 +456,12 @@
             
             // Valider le QR code scanné
             function validateQRCode(qrData) {
-                // Update the daily counter for any scan (valid or invalid)
-                updateDailyCounter();
+                // Convert to lowercase for case-insensitive matching
+                const normalizedQrData = qrData.toLowerCase();
                 
-                if (studentDatabase[qrData]) {
+                if (studentDatabase[normalizedQrData]) {
                     const now = new Date();
-                    const student = studentDatabase[qrData];
+                    const student = studentDatabase[normalizedQrData];
                     
                     // Vérifier si l'étudiant a déjà mangé dans les 8 dernières heures
                     if (student.lastMeal) {
@@ -418,9 +483,11 @@
                         }
                     }
                     
-                    // Accès autorisé
+                    // Accès autorisé - update counter only for valid scans
+                    updateDailyCounter();
+                    
                     student.lastMeal = now.toISOString();
-                    studentDatabase[qrData] = student;
+                    studentDatabase[normalizedQrData] = student;
                     saveStudentData(studentDatabase);
                     
                     resultDiv.textContent = `Accès autorisé. Bon appétit ${student.name} !`;
