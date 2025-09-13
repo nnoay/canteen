@@ -63,7 +63,7 @@
             box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
             text-align: center;
             color: #0d2b4b;
-            margin-bottom: 100px; /* Added space for the counter at bottom */
+            margin-bottom: 100px;
         }
         
         h1 {
@@ -422,6 +422,7 @@
                     console.error("Erreur d'accès à la caméra:", err);
                     resultDiv.textContent = "Impossible d'accéder à la caméra: " + err.message;
                     resultDiv.className = 'invalid';
+                    resultDiv.style.opacity = '1';
                 }
             }
             
@@ -518,6 +519,13 @@
                 }
                 
                 resultDiv.style.opacity = '1';
+                
+                // Reset after 3 seconds
+                setTimeout(() => {
+                    resultDiv.style.opacity = '0';
+                    statusIndicator.classList.remove('status-visible');
+                    lastScannedCode = null;
+                }, 3000);
             }
             
             // Initialiser la caméra au chargement de la page
