@@ -310,12 +310,10 @@
             const loadingElement = document.getElementById('loading');
             
             let scanning = true;
-            let animationFrame = null;
             let lastScannedCode = null;
             let resetTimeout = null;
             let scanInterval = null;
             let isProcessing = false;
-            let scanQueue = [];
             
             // Get next reset time (midnight)
             function getNextResetTime() {
@@ -515,6 +513,12 @@
                             const hoursLeft = Math.ceil((nextMealTime - now) / (60 * 60 * 1000));
                             
                             showResult(`Accès refusé. Prochain repas dans ${hoursLeft} heure(s)`, 'invalid');
+                            
+                            // Reset after 3 seconds
+                            resetTimeout = setTimeout(() => {
+                                resetScanner();
+                                isProcessing = false;
+                            }, 3000);
                             return;
                         }
                     }
@@ -572,7 +576,6 @@
             // Clean up on page unload
             window.addEventListener('beforeunload', function() {
                 if (scanInterval) clearInterval(scanInterval);
-                if (animationFrame) cancelAnimationFrame(animationFrame);
                 if (resetTimeout) clearTimeout(resetTimeout);
             });
         });
