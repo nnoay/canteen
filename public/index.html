@@ -222,6 +222,17 @@
             opacity: 0.8;
         }
         
+        .loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            font-size: 1.2rem;
+            text-align: center;
+            z-index: 5;
+        }
+        
         @media (max-width: 600px) {
             .container {
                 padding: 15px;
@@ -274,6 +285,7 @@
             <div id="video-container">
                 <video id="video" autoplay playsinline></video>
                 <div class="scan-area"></div>
+                <div class="loading" id="loading">Initialisation de la caméra...</div>
             </div>
         </div>
         
@@ -295,10 +307,12 @@
             const statusIndicator = document.getElementById('status-indicator');
             const dailyCounter = document.getElementById('daily-counter');
             const resetTimeElement = document.getElementById('reset-time');
+            const loadingElement = document.getElementById('loading');
             
             let scanning = true;
             let animationFrame = null;
             let lastScannedCode = null;
+            let resetTimeout = null;
             
             // Get next reset time (midnight)
             function getNextResetTime() {
@@ -417,9 +431,16 @@
                     });
                     video.srcObject = stream;
                     video.play();
+                    
+                    // Hide loading message when video starts playing
+                    video.onplaying = function() {
+                        loadingElement.style.display = 'none';
+                    };
+                    
                     requestAnimationFrame(scanQRCode);
                 } catch (err) {
                     console.error("Erreur d'accès à la caméra:", err);
+                    loadingElement.textContent = "Impossible d'accéder à la caméra. Veuillez vérifier les permissions.";
                     resultDiv.textContent = "Impossible d'accéder à la caméra: " + err.message;
                     resultDiv.className = 'invalid';
                     resultDiv.style.opacity = '1';
@@ -457,6 +478,11 @@
             
             // Valider le QR code scanné
             function validateQRCode(qrData) {
+                // Clear any existing timeout
+                if (resetTimeout) {
+                    clearTimeout(resetTimeout);
+                }
+                
                 // Check if QR code is in the valid format and range
                 if (isValidQRCode(qrData)) {
                     // Initialize student record if it doesn't exist
@@ -487,6 +513,9 @@
                             statusIndicator.style.color = "#ff0000";
                             statusIndicator.style.border = "4px solid #ff0000";
                             statusIndicator.classList.add('status-visible');
+                            
+                            // Reset after 3 seconds
+                            resetTimeout = setTimeout(resetScanner, 3000);
                             return;
                         }
                     }
@@ -521,11 +550,14 @@
                 resultDiv.style.opacity = '1';
                 
                 // Reset after 3 seconds
-                setTimeout(() => {
-                    resultDiv.style.opacity = '0';
-                    statusIndicator.classList.remove('status-visible');
-                    lastScannedCode = null;
-                }, 3000);
+                resetTimeout = setTimeout(resetScanner, 3000);
+            }
+            
+            // Reset the scanner UI
+            function resetScanner() {
+                resultDiv.style.opacity = '0';
+                statusIndicator.classList.remove('status-visible');
+                lastScannedCode = null;
             }
             
             // Initialiser la caméra au chargement de la page
