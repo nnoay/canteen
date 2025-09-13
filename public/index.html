@@ -364,6 +364,33 @@
             
             let counterData = initializeDailyCounter();
             
+            // Function to check if a QR code is in the valid range
+            function isValidQRCode(qrData) {
+                // Check if the code matches the pattern ELEVE followed by a number between 1000 and 2000
+                const pattern = /^ELEVE(\d{4})$/;
+                const match = qrData.match(pattern);
+                
+                if (match) {
+                    const number = parseInt(match[1], 10);
+                    return number >= 1000 && number <= 2000;
+                }
+                
+                return false;
+            }
+            
+            // Generate a student name based on the QR code
+            function generateStudentName(qrData) {
+                const number = parseInt(qrData.replace('ELEVE', ''), 10);
+                // Simple name generation based on the number
+                const firstNames = ['Jean', 'Marie', 'Pierre', 'Sophie', 'Luc', 'Emma', 'Thomas', 'Julie'];
+                const lastNames = ['Dupont', 'Martin', 'Leroy', 'Moreau', 'Petit', 'Durand', 'Lefebvre', 'Garcia'];
+                
+                const firstName = firstNames[number % firstNames.length];
+                const lastName = lastNames[number % lastNames.length];
+                
+                return `${firstName} ${lastName}`;
+            }
+            
             // Charger les données depuis le localStorage ou initialiser
             function loadStudentData() {
                 const storedData = localStorage.getItem('cantineData');
@@ -371,21 +398,8 @@
                     return JSON.parse(storedData);
                 }
                 
-                // Base de données initiale des étudiants (Ajoutez vos codes QR valides ici)
-                return {
-                    'ETUDIANT-1234': {
-                        name: 'Jean Dupont',
-                        lastMeal: null
-                    },
-                    'ETUDIANT-5678': {
-                        name: 'Marie Martin',
-                        lastMeal: null
-                    },
-                    'ETUDIANT-9012': {
-                        name: 'Pierre Leroy',
-                        lastMeal: null
-                    }
-                };
+                // Return empty database - we'll validate codes dynamically
+                return {};
             }
             
             // Sauvegarder les données dans le localStorage
@@ -442,7 +456,17 @@
             
             // Valider le QR code scanné
             function validateQRCode(qrData) {
-                if (studentDatabase[qrData]) {
+                // Check if QR code is in the valid format and range
+                if (isValidQRCode(qrData)) {
+                    // Initialize student record if it doesn't exist
+                    if (!studentDatabase[qrData]) {
+                        studentDatabase[qrData] = {
+                            name: generateStudentName(qrData),
+                            lastMeal: null
+                        };
+                        saveStudentData(studentDatabase);
+                    }
+                    
                     const now = new Date();
                     const student = studentDatabase[qrData];
                     
