@@ -273,13 +273,13 @@
     <div class="header">
         <div class="logo-container">
             <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRFjcXGw-eclYBXW-mMmeO8H7P5OOBOgUJWvQ&s" alt="School Logo" class="school-logo">
-            <div class="school-name">École Secondaire</div>
+            <div class="school-name">Lycée Pilote Bourguiba</div>
         </div>
     </div>
     
     <div class="container">
         <h1>Scanner QR - Cantine Scolaire</h1>
-        <p class="subtitle">Scannez le code QR d'un étudiant pour vérifier son accès</p>
+        
         
         <div class="scanner-container">
             <div id="video-container">
@@ -512,7 +512,7 @@
                             const nextMealTime = new Date(lastMealTime.getTime() + 8 * 60 * 60 * 1000);
                             const hoursLeft = Math.ceil((nextMealTime - now) / (60 * 60 * 1000));
                             
-                            showResult(`Accès refusé. Prochain repas dans ${hoursLeft} heure(s)`, 'invalid');
+                            showResult(`Le code QR est déjà scanné`, 'invalid');
                             
                             // Reset after 3 seconds
                             resetTimeout = setTimeout(() => {
@@ -530,7 +530,7 @@
                     studentDatabase[qrData] = student;
                     saveStudentData(studentDatabase);
                     
-                    showResult(`Accès autorisé. Bon appétit ${student.name} !`, 'valid');
+                    showResult(`Accès autorisé. Bon appétit  !`, 'valid');
                 } else {
                     // QR code invalide
                     showResult("Code QR invalide - Accès refusé", 'invalid');
